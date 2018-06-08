@@ -61,3 +61,17 @@ plt.title( "Visualizing Tweet frequency: Year wise, and User-wise", fontsize=16)
 axes.set_xlabel("Twitter user name", fontsize=16)
 fig.tight_layout()
 plt.savefig("data/followers.jpg")
+
+##4 . A word cloud to see the important words at play here
+from wordcloud import WordCloud, STOPWORDS
+text = "\n".join( [ft for ft in data.fulltext] )
+wordcloud = WordCloud(relative_scaling = 1.0, stopwords = STOPWORDS.union(["https","co","rt"])
+                     ).generate(text)
+fig, axes = plt.subplots(figsize=(15,6))
+plt.imshow(wordcloud)
+plt.axis("off"),
+plt.savefig("data/wordcloud.jpg")
+#plt.show()\n",
+
+ 
+
