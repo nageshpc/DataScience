@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import pickle
 import keras 
+import pdb
 
 import sklearn
 import sklearn.preprocessing
@@ -13,7 +14,7 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 from keras.layers import Dense, Input, Flatten , Dropout, LSTM, Bidirectional
-from keras.layers import Conv1D, MaxPooling1D, Embedding
+from keras.layers import Conv1D, MaxPooling1D, Embedding, AveragePooling1D
 from keras.models import Model
 from keras.layers import Merge, LSTM, Dense , Masking
 from keras.layers import TimeDistributed
@@ -25,7 +26,7 @@ from keras.preprocessing import sequence
 
 MAX_SEQ_LEN = 256  #  mean/median is around 22, but max is close to 247.
 BATCH_SIZE = 32
-EPOCHS  = 20
+EPOCHS  = 10
  
 
 ############################################################################################
@@ -87,13 +88,14 @@ def learn_answer_selector( word_index
     question_embedding  = word_embedding_layer(question_input)
     answer_embedding    = word_embedding_layer(answer_input)
 
-    ##conv 1d + max pooling (with  cell size 128, 3 or trigram window)
-    ques_conv = Conv1D(128, 3, activation="relu")(question_embedding)
-    ques_max = MaxPooling1D(5)(ques_conv)
+
+    ##conv 1d + max pooling (with  cell size 128, 2 or bigram window)
+    ques_conv = Conv1D(128, 2, activation="relu")(question_embedding)
+    ques_max = AveragePooling1D(2)(ques_conv)
     ques_vec = Flatten()(ques_max)
 
-    ans_conv = Conv1D(128, 3, activation="relu")(answer_embedding)
-    ans_max = MaxPooling1D(5)(ans_conv)
+    ans_conv = Conv1D(128, 2, activation="relu")(answer_embedding)
+    ans_max = AveragePooling1D(2)(ans_conv)
     ans_vec = Flatten()(ans_max)
 
     #merge the vector pairs + Dense layer + Logistic Regression as the final classifier
@@ -107,9 +109,13 @@ def learn_answer_selector( word_index
     print("Model summary ", model.summary() ) 
     print("Training the model ")
     model.compile( loss= "categorical_crossentropy", optimizer="adam", metrics=["acc"] )
+
+    class_weight= sklearn.utils.class_weight.compute_class_weight('balanced', 
+                        classes= [0,1], y= train_labels[:,1] )
+ 
     model.fit( x=[train_questions, train_answers] , y= train_labels 
                 , validation_data= [ [val_questions, val_answers], val_labels] 
-                , batch_size = BATCH_SIZE, epochs= EPOCHS)
+                , batch_size = BATCH_SIZE, epochs= EPOCHS, class_weight=class_weight )
     ##
     return model    
 
